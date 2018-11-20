@@ -1,0 +1,22 @@
+version: "3.2"
+services:
+  php53:
+    build: './php/'
+    image: php5-3:v1
+    networks:
+      - backend
+    volumes:
+      - /d/www/:/var/www/html/
+  apache:
+    build: './apache/'
+    image: apache:hosts-1
+    depends_on:
+      - php53
+    networks:
+      - backend
+    ports:
+      - "8053:80"
+    volumes:
+      - /d/www/:/var/www/html/  
+networks:
+  backend:

@@ -1,0 +1,107 @@
+FROM  opensuse/leap:42.3
+RUN zypper -n up
+RUN zypper -n install --no-recommends autoconf autoconf213 \
+   dpkg-devel \
+   file \
+   gcc-c++ \
+   libc++1 \
+   make \
+   pkg-config \
+   re2c \
+   libopenssl-devel \
+   curl \
+   pixz \
+   dirmngr \
+   gpg2 \
+   libpq5 \
+   libcurl-devel \
+   libedit-devel \
+   sqlite3-devel \
+   postgresql-devel \
+   libssl45 \
+   libxml2-devel \
+   wget \
+   tar \
+   gzip \
+   ca-certificates \
+   xz \
+   recode-devel \
+   openldap2-devel \
+   unixODBC-devel \
+   libmysqlclient-devel \
+   gd-devel \
+   libldb-devel \
+   libicu-devel \
+   libxslt-devel \
+#   apache2 \
+#   apache2-devel \
+   && zypper clean -a \
+   && mkdir -p /usr/local/etc/php/conf.d  /usr/src/php /tmp/openssl
+
+RUN cd /tmp \
+   && curl -sL "https://www.openssl.org/source/old/0.9.x/openssl-0.9.8zh.tar.gz" -o openssl.tar.gz \
+   && wget -qO php.tar.xz "http://br2.php.net/distributions/php-5.3.29.tar.xz" \
+   && wget -O oracle-oci8.rpm --no-check-certificate "https://onedrive.live.com/download?cid=00FC9869C6A3ECE0&resid=FC9869C6A3ECE0%21161156&authkey=ABdXhBIpRB918BM" \
+   && wget -O oracle-oci8-devel.rpm --no-check-certificate "https://onedrive.live.com/download?cid=00FC9869C6A3ECE0&resid=FC9869C6A3ECE0%21161150&authkey=AM_WSNkGJKSMSfU"
+RUN cd /tmp  \
+    && rpm -ivh oracle-oci8.rpm oracle-oci8-devel.rpm \
+    && echo /usr/lib/oracle/10.2.0.5/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig \
+    && export LD_LIBRARY_PATH=/usr/lib/oracle/10.2.0.5/client64/lib:$LD_LIBRARY_PATH \
+    && tar -xzf openssl.tar.gz -C openssl --strip-components=1 \
+    && tar -xof php.tar.xz -C /usr/src/php --strip-components=1
+RUN cd /tmp/openssl \
+   && ./config --prefix=/usr/local --openssldir=/usr/local/openssl-0.9.8 \
+   && make \
+   && make install \
+   && rm -rf /tmp/*
+
+RUN cd /usr/src/php \
+   && ./configure \
+       --with-libdir=lib64 \
+       --with-config-file-path="/usr/local/etc/php" \
+       --with-config-file-scan-dir="/usr/local/etc/php/conf.d" \
+#--with-apxs2=/usr/sbin/apxs \
+       --with-pdo-oci=instantclient,/usr,10.2.0.5 \
+       --with-oci8 \
+       --with-openssl \
+       --enable-fpm \
+       --with-fpm-user=wwwrun \
+       --with-fpm-group=www \
+       --enable-cli \
+       --disable-cgi \
+       --enable-mbstring \
+       --enable-libxml \
+       --enable-intl \
+       --enable-exif \
+       --enable-soap \
+       --enable-zip \
+       --enable-shmop \
+       --with-xsl \
+       --with-unixODBC=/usr \
+       --with-pgsql \
+       --with-mysql=mysqlnd \
+       --with-mysql-sock \
+       --with-mysqli=/usr/bin/mysql_config \
+       --with-pdo-pgsql \
+       --with-pdo-mysql \
+       --with-zlib \
+       --with-curl \
+       --with-gd \
+       --with-xmlrpc \
+       --with-ldap
+RUN cd /usr/src/php \
+   && sed -i '/EXTRA_LIBS = /s|$| -lstdc++|' Makefile \
+   && make -j"$(nproc)" \
+   && make install 
+
+COPY php-fpm.conf /usr/local/etc/php-fpm.conf  
+COPY php-fpm.conf.default /usr/local/etc/php-fpm.conf.default
+
+RUN set -- php-fpm "$@" \
+   && mkdir -p /var/www/html 
+
+WORKDIR /var/www/html/
+  
+EXPOSE 9000
+CMD [ "php-fpm"]
