@@ -33,8 +33,6 @@ RUN zypper -n install --no-recommends autoconf autoconf213 \
    libldb-devel \
    libicu-devel \
    libxslt-devel \
-#   apache2 \
-#   apache2-devel \
    && zypper clean -a \
    && mkdir -p /usr/local/etc/php/conf.d  /usr/src/php /tmp/openssl
 
@@ -61,7 +59,6 @@ RUN cd /usr/src/php \
        --with-libdir=lib64 \
        --with-config-file-path="/usr/local/etc/php" \
        --with-config-file-scan-dir="/usr/local/etc/php/conf.d" \
-#--with-apxs2=/usr/sbin/apxs \
        --with-pdo-oci=instantclient,/usr,10.2.0.5 \
        --with-oci8 \
        --with-openssl \
@@ -99,7 +96,8 @@ COPY php-fpm.conf /usr/local/etc/php-fpm.conf
 COPY php-fpm.conf.default /usr/local/etc/php-fpm.conf.default
 
 RUN set -- php-fpm "$@" \
-   && mkdir -p /var/www/html 
+   && mkdir -p /var/www/html \
+   && pear install MDB2_Driver_pgsql
 
 WORKDIR /var/www/html/
   
