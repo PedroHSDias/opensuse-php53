@@ -2,7 +2,7 @@ version: "3.2"
 services:
   php53:
     build: './php/'
-    image: php5-3:v1
+    image: php5-3:v1.1
     networks:
       - backend
     volumes:

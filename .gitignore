@@ -1,2 +1,4 @@
-/smarty-2.6.31/*
-
+/php/php.ini-*
+/php/smarty-2.6.31/*
+!/php/smarty-2.6.31/libs
+/php/smarty-2.6.31.zip

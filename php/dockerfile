@@ -38,16 +38,19 @@ RUN zypper -n install --no-recommends autoconf autoconf213 \
 
 RUN cd /tmp \
    && curl -sL "https://www.openssl.org/source/old/0.9.x/openssl-0.9.8zh.tar.gz" -o openssl.tar.gz \
-   && wget -qO php.tar.xz "http://br2.php.net/distributions/php-5.3.29.tar.xz" \
    && wget -O oracle-oci8.rpm --no-check-certificate "https://onedrive.live.com/download?cid=00FC9869C6A3ECE0&resid=FC9869C6A3ECE0%21161156&authkey=ABdXhBIpRB918BM" \
-   && wget -O oracle-oci8-devel.rpm --no-check-certificate "https://onedrive.live.com/download?cid=00FC9869C6A3ECE0&resid=FC9869C6A3ECE0%21161150&authkey=AM_WSNkGJKSMSfU"
+   && wget -O oracle-oci8-devel.rpm --no-check-certificate "https://onedrive.live.com/download?cid=00FC9869C6A3ECE0&resid=FC9869C6A3ECE0%21161150&authkey=AM_WSNkGJKSMSfU" \
+   && wget -qO php.tar.xz "http://br2.php.net/distributions/php-5.3.29.tar.xz" 
+
 RUN cd /tmp  \
     && rpm -ivh oracle-oci8.rpm oracle-oci8-devel.rpm \
     && echo /usr/lib/oracle/10.2.0.5/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf \
     && ldconfig \
-    && export LD_LIBRARY_PATH=/usr/lib/oracle/10.2.0.5/client64/lib:$LD_LIBRARY_PATH \
     && tar -xzf openssl.tar.gz -C openssl --strip-components=1 \
     && tar -xof php.tar.xz -C /usr/src/php --strip-components=1
+ENV LD_LIBRARY_PATH=/usr/lib/oracle/10.2.0.5/client64/lib \
+    ORACLE_HOME=/usr/lib/oracle/10.2.0.5/client64/lib
+
 RUN cd /tmp/openssl \
    && ./config --prefix=/usr/local --openssldir=/usr/local/openssl-0.9.8 \
    && make \
@@ -59,12 +62,10 @@ RUN cd /usr/src/php \
        --with-libdir=lib64 \
        --with-config-file-path="/usr/local/etc/php" \
        --with-config-file-scan-dir="/usr/local/etc/php/conf.d" \
+       --with-oci8=instantclient,/usr/lib/oracle/10.2.0.5/client64/lib \
        --with-pdo-oci=instantclient,/usr,10.2.0.5 \
-       --with-oci8 \
        --with-openssl \
        --enable-fpm \
-       --with-fpm-user=wwwrun \
-       --with-fpm-group=www \
        --enable-cli \
        --disable-cgi \
        --enable-mbstring \
@@ -74,6 +75,7 @@ RUN cd /usr/src/php \
        --enable-soap \
        --enable-zip \
        --enable-shmop \
+       --enable-debug \
        --with-xsl \
        --with-unixODBC=/usr \
        --with-pgsql \
@@ -94,6 +96,8 @@ RUN cd /usr/src/php \
 
 COPY php-fpm.conf /usr/local/etc/php-fpm.conf  
 COPY php-fpm.conf.default /usr/local/etc/php-fpm.conf.default
+COPY php.ini /usr/local/etc/php/php.ini
+COPY smarty-2.6.31/libs/ /var/www/libs/smart2.6/
 
 RUN set -- php-fpm "$@" \
    && mkdir -p /var/www/html \
